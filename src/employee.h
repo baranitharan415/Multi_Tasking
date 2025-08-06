@@ -1,20 +1,29 @@
+#ifndef employee_H
+#define employee_H
+
 #include <Arduino.h>
 #include <WiFi.h>
 #include <Arduinojson.h>
 #include <HTTPClient.h>
 #include <BluetoothSerial.h>
+#include <send_fail.h>
+
+
+
 
 String status;
 BluetoothSerial SerialBT;
 int work = 0;
 
-JsonDocument docum;
 String serverUrl, id;
 bool employee_allocate = false;
 long last_millis = 0;
 
 String employee[] = {"Ram", "Suresh", "Ramesh", "Dinesh", "Kanish", "Ramesh", "Rajesh", "Harish", "Jithesh", "Pranesh"};
 
+int json(String str);
+void failed(String str);
+void Send();
 String Read()
 {
     Serial.begin(57600);
@@ -61,13 +70,19 @@ void convert()
     {
         seconds = work;
     }
+    JsonDocument docum;
     sprintf(values, "%02d:%02d:%02d", hours, minutes, seconds);
     docum["Loom No"] = "5";
     docum["Employee id"] = id;
     docum["Employee Name"] = employee[id.toInt()];
     docum["Working Hours"] = values;
+    String str;
+    serializeJson(docum, str);
+    if (json(str) != 200)
+        failed(str);
+    else
+        Send();
 }
-
 
 void start()
 {
@@ -75,17 +90,16 @@ void start()
     SerialBT.println("Shift time started");
 }
 
-void json()
+int json(String str)
 {
     HTTPClient http_s;
     // http_s.begin(serverUrl);
     http_s.begin("http://192.168.0.45:5000/api/data");
     http_s.addHeader("Content-Type", "application/json");
-    String jsonString;
-    serializeJson(docum, jsonString);
-    int httpResponseCode = http_s.POST(jsonString);
+    int httpResponseCode = http_s.POST(str);
     SerialBT.println(httpResponseCode);
     http_s.end();
+    return httpResponseCode;
 }
 
 void stop()
@@ -93,7 +107,6 @@ void stop()
     Serial.println("Shift time ended");
     SerialBT.println("Shift time ended");
     convert();
-    json();
     employee_allocate = false;
     work = 0;
 }
@@ -158,3 +171,4 @@ void create_task()
         1,
         NULL);
 }
+#endif

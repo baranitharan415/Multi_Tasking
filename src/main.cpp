@@ -1,11 +1,12 @@
-#include <WiFi.h>
+// #include <WiFi.h>
 #include <EEPROM.h>
-#include <Arduino.h>
-#include <ArduinoJson.h>
+// #include <Arduino.h>
+// #include <ArduinoJson.h>
 #include <PubSubClient.h>
-#include <HTTPClient.h>
+// #include <HTTPClient.h>
+#include <SPIFFS.h>
+#include <send_fail.h>
 #include "employee.h"
-
 
 
 HardwareSerial NewSerial(2);
@@ -316,7 +317,7 @@ void setup()
   Serial.begin(57600);
   create_task();
   NewSerial.begin(115200,SERIAL_8N1,16,17);
-
+  SPIFFS.begin();
   EEPROM.begin(512);
   WiFi.mode(WIFI_STA);
   EEP_value();
@@ -341,17 +342,17 @@ void setup()
   Serial.println(WiFi.localIP());
   set();
 
-  Serial.print("\nPlease Enter the Server URL : ");
+  // Serial.print("\nPlease Enter the Server URL : ");
   
-  pubserverUrl = line();
-  Serial.println(pubserverUrl);
+  // pubserverUrl = line();
+  // Serial.println(pubserverUrl);
   
 
-  // http.end();
+  // // http.end();
 
 
 
-  Serial.println();
+  // Serial.println();
   
   client.setServer(ms.c_str(), 1883);
   client.setCallback(callback);
@@ -383,16 +384,18 @@ void loop()
   }
   if(millis()-previousMillis >= interval)
   {
-      http.begin(pubserverUrl);
-      http.addHeader("Content-Type", "application/json");
-  
       previousMillis=millis();
       String jsonString;
       serializeJson(doc, jsonString);
-      int httpResponseCode = http.POST(jsonString);
-      Serial.println(httpResponseCode);
+      int response = json(jsonString);
+      if(response!=200)
+      {
+        failed(jsonString);
+      }
+      else
+        Send();
   }
+
   client.loop();
   delay(1000);
-  http.end();
 }
