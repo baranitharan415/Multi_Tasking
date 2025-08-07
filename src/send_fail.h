@@ -2,34 +2,58 @@
 #define send_fail_H
 
 // #include <Arduino.h>
+#include <SD.h>
 #include <employee.h>
 #include <SPIFFS.h>
 long file_count = 0;
+#define SD_CS 5 // Chip select pin
 
 void failed(String str)
 {
+   
+
+    // if (!SD.begin(SD_CS))
+    // {
+    //     Serial.println("SD Card Mount Failed");
+    //     return;
+    // }
+
+    // uint8_t cardType = SD.cardType();
+    // if (cardType == CARD_NONE)
+    // {
+    //     Serial.println("No SD card attached");
+    //     return;
+    // }
+
     String file_name = "/" + String(file_count++) + ".json";
 
-    File file = SPIFFS.open(file_name, FILE_WRITE);
-
+    File file = SD.open(file_name, FILE_WRITE);
     file.print(str);
     file.close();
+
     Serial.println("File stored");
+    // SD.end();
 }
 
 void Send()
 {
 
-    File root = SPIFFS.open("/");
-    if (!root || !root.isDirectory())
-    {
-        Serial.println("Failed to open SPIFFS root");
-        return;
-    }
+    // if (!SD.begin(SD_CS))
+    // {
+    //     Serial.println("SD Card Mount Failed");
+    //     return;
+    // }
+
+    File root = SD.open("/");
+    // if (!root || !root.isDirectory())
+    // {
+    //     Serial.println("Failed to open SD root");
+    //     return;
+    // }
     File file = root.openNextFile();
     while (file)
     {
-        String file_name = "/" + String(file.name());
+        String file_name = "/"+String(file.name());
         String data = file.readString();
         file.close();
         if (json(data) != 200)
@@ -38,11 +62,15 @@ void Send()
             break;
         }
         Serial.println(file_name);
-        if (SPIFFS.exists(file_name))
-            SPIFFS.remove(file_name);
+        if (SD.exists(file_name))
+        {
+            SD.remove(file_name);
+            Serial.println("File_Removed");
+        }
         file = root.openNextFile();
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
+    // SD.end();
 }
 
 // void remove()

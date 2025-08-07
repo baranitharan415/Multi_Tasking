@@ -21,6 +21,7 @@ String client_name;
 String topic[] = {"PICKS", "WARP", "FILL", "OTHER", "TOTAL", "SHIFT", "RUN", "EFF", "STATE", "CAUSE"};
 JsonDocument doc;
 
+
 String pubserverUrl;
 int t;
 int picks=0, warp, fill, other, total, state, cause,shift;
@@ -393,9 +394,12 @@ void loop()
         failed(jsonString);
       }
       else
+      {
+        Serial.println("Call From main");
         Send();
+      }
   }
-
+  Serial.println(client.state());
   client.loop();
   delay(1000);
 }

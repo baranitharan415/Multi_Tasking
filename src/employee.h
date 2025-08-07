@@ -7,10 +7,10 @@
 #include <HTTPClient.h>
 #include <BluetoothSerial.h>
 #include <send_fail.h>
+#include <SD.h>
+#include <time.h>
 
-
-
-
+#define SD_CS 5 
 String status;
 BluetoothSerial SerialBT;
 int work = 0;
@@ -20,6 +20,15 @@ bool employee_allocate = false;
 long last_millis = 0;
 
 String employee[] = {"Ram", "Suresh", "Ramesh", "Dinesh", "Kanish", "Ramesh", "Rajesh", "Harish", "Jithesh", "Pranesh"};
+char in_time[25];
+char out_time[25];
+
+
+
+const char* ntpServer = "pool.ntp.org";
+const long gmtOffset_sec = 19800;   
+const int daylightOffset_sec = 0;
+
 
 int json(String str);
 void failed(String str);
@@ -88,7 +97,15 @@ void start()
 {
     Serial.println("Shift time started");
     SerialBT.println("Shift time started");
+
+    struct tm timeinfo;
+    if (getLocalTime(&timeinfo)) {
+        strftime(in_time, sizeof(in_time), "%H:%M:%S", &timeinfo);
+    } else {
+        Serial.println("Failed to get time");
+    }
 }
+
 
 int json(String str)
 {
@@ -103,12 +120,22 @@ int json(String str)
 }
 
 void stop()
-{
+{  
     Serial.println("Shift time ended");
     SerialBT.println("Shift time ended");
     convert();
     employee_allocate = false;
     work = 0;
+      struct tm timeinfo;
+    if (getLocalTime(&timeinfo)) {
+        strftime(out_time, sizeof(out_time), "%H:%M:%S", &timeinfo);
+    } else {
+        Serial.println("Failed to get time");
+    }
+    SerialBT.print("In Time : ");
+    SerialBT.println(in_time);
+    SerialBT.print("Out Time : ");
+    SerialBT.println(out_time);
 }
 
 void e_allocate()
@@ -130,6 +157,12 @@ void check(String str)
 
 void attendance(void *para)
 {
+    if (!SD.begin(SD_CS))
+    {
+        Serial.println("SD Card Mount Failed");
+        return;
+    }
+
     SerialBT.begin("KB_415");
     // WiFi.mode(WIFI_STA);
     // WiFi.begin("DC-R&D", "India@123");
@@ -138,6 +171,7 @@ void attendance(void *para)
     // Serial.print("Enter ServerUrl : ");
     // url();
     btconnect();
+    configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
 
     while (1)
     {
@@ -170,5 +204,6 @@ void create_task()
         NULL,
         1,
         NULL);
+      
 }
 #endif
