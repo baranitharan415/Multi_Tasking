@@ -7,10 +7,9 @@
 #include <HTTPClient.h>
 #include <BluetoothSerial.h>
 #include <send_fail.h>
-#include <SD.h>
 #include <time.h>
 
-#define SD_CS 5 
+
 String status;
 BluetoothSerial SerialBT;
 int work = 0;
@@ -157,12 +156,6 @@ void check(String str)
 
 void attendance(void *para)
 {
-    if (!SD.begin(SD_CS))
-    {
-        Serial.println("SD Card Mount Failed");
-        return;
-    }
-
     SerialBT.begin("KB_415");
     // WiFi.mode(WIFI_STA);
     // WiFi.begin("DC-R&D", "India@123");

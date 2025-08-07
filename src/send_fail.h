@@ -12,18 +12,18 @@ void failed(String str)
 {
    
 
-    // if (!SD.begin(SD_CS))
-    // {
-    //     Serial.println("SD Card Mount Failed");
-    //     return;
-    // }
+    if (!SD.begin(SD_CS))
+    {
+        Serial.println("SD Card Mount Failed");
+        return;
+    }
 
-    // uint8_t cardType = SD.cardType();
-    // if (cardType == CARD_NONE)
-    // {
-    //     Serial.println("No SD card attached");
-    //     return;
-    // }
+    uint8_t cardType = SD.cardType();
+    if (cardType == CARD_NONE)
+    {
+        Serial.println("No SD card attached");
+        return;
+    }
 
     String file_name = "/" + String(file_count++) + ".json";
 
@@ -32,24 +32,24 @@ void failed(String str)
     file.close();
 
     Serial.println("File stored");
-    // SD.end();
+    SD.end();
 }
 
 void Send()
 {
 
-    // if (!SD.begin(SD_CS))
-    // {
-    //     Serial.println("SD Card Mount Failed");
-    //     return;
-    // }
+    if (!SD.begin(SD_CS))
+    {
+        Serial.println("SD Card Mount Failed");
+        return;
+    }
 
     File root = SD.open("/");
-    // if (!root || !root.isDirectory())
-    // {
-    //     Serial.println("Failed to open SD root");
-    //     return;
-    // }
+    if (!root || !root.isDirectory())
+    {
+        Serial.println("Failed to open SD root");
+        return;
+    }
     File file = root.openNextFile();
     while (file)
     {
@@ -70,7 +70,7 @@ void Send()
         file = root.openNextFile();
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
-    // SD.end();
+    SD.end();
 }
 
 // void remove()
