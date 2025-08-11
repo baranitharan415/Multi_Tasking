@@ -19,8 +19,8 @@ bool employee_allocate = false;
 long last_millis = 0;
 
 String employee[] = {"Ram", "Suresh", "Ramesh", "Dinesh", "Kanish", "Ramesh", "Rajesh", "Harish", "Jithesh", "Pranesh"};
-char in_time[25];
-char out_time[25];
+char in_time[30];
+char out_time[30];
 
 
 
@@ -80,40 +80,48 @@ void convert()
     }
     JsonDocument docum;
     sprintf(values, "%02d:%02d:%02d", hours, minutes, seconds);
-    docum["Loom No"] = "5";
-    docum["Employee id"] = id;
-    docum["Employee Name"] = employee[id.toInt()];
-    docum["Working Hours"] = values;
+    docum["employeeId"] = id;
+    docum["machineId"] = 5;
+    docum["startingTime"] = in_time;
+    docum["endingTime"] = out_time;
+    // docum["Employee Name"] = employee[id.toInt()];
+    // docum["Working Hours"] = values;
     String str;
     serializeJson(docum, str);
-    if (json(str) != 200)
-        failed(str);
-    else
-        Send();
+    Serial.println(str);
+    SerialBT.println(json(str));
+    // if (json(str) != 200)
+        // failed(str);
+    // else
+        // Send();
 }
 
 void start()
 {
     Serial.println("Shift time started");
     SerialBT.println("Shift time started");
-
     struct tm timeinfo;
-    if (getLocalTime(&timeinfo)) {
-        strftime(in_time, sizeof(in_time), "%H:%M:%S", &timeinfo);
-    } else {
-        Serial.println("Failed to get time");
+    if (getLocalTime(&timeinfo))
+    {
+    getLocalTime(&timeinfo);   
+    strftime(in_time, sizeof(in_time), "%Y-%m-%dT%H:%M:%S.000Z", &timeinfo);
     }
+    else
+    {
+        SerialBT.println("Time Getting failed");
+    }
+
 }
-
-
 int json(String str)
 {
     HTTPClient http_s;
     // http_s.begin(serverUrl);
-    http_s.begin("http://192.168.0.45:5000/api/data");
+    http_s.begin("http://192.168.1.38:8094/hms-rest-api/api/employees");
+    // http://192.168.1.38:8094/hms-rest-api/api/data
     http_s.addHeader("Content-Type", "application/json");
     int httpResponseCode = http_s.POST(str);
     SerialBT.println(httpResponseCode);
+    Serial.println(httpResponseCode);
     http_s.end();
     return httpResponseCode;
 }
@@ -122,15 +130,15 @@ void stop()
 {  
     Serial.println("Shift time ended");
     SerialBT.println("Shift time ended");
-    convert();
     employee_allocate = false;
     work = 0;
       struct tm timeinfo;
     if (getLocalTime(&timeinfo)) {
-        strftime(out_time, sizeof(out_time), "%H:%M:%S", &timeinfo);
+         strftime(out_time, sizeof(out_time), "%Y-%m-%dT%H:%M:%S.000Z", &timeinfo);
     } else {
         Serial.println("Failed to get time");
     }
+    convert();
     SerialBT.print("In Time : ");
     SerialBT.println(in_time);
     SerialBT.print("Out Time : ");
@@ -164,7 +172,7 @@ void attendance(void *para)
     // Serial.print("Enter ServerUrl : ");
     // url();
     btconnect();
-    configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+     configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
 
     while (1)
     {

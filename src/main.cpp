@@ -11,6 +11,7 @@
 
 HardwareSerial NewSerial(2);
 
+int pubmillis =0;
 HTTPClient http;
 String input;
 String key, value;
@@ -18,14 +19,15 @@ String ssid;
 String pwd;
 String ms;
 String client_name;
-String topic[] = {"PICKS", "WARP", "FILL", "OTHER", "TOTAL", "SHIFT", "RUN", "EFF", "STATE", "CAUSE"};
+String topic[] = {"picks", "warp", "fill", "others", "shiftSeconds", "runSeconds", "efficiency", "state", "cause"};
 JsonDocument doc;
 
 
 String pubserverUrl;
 int t;
-int picks=0, warp, fill, other, total, state, cause,shift;
-float eff,run;
+int PICKS=0, WARP, FILL, OTHERS, TOTAL, CAUSE,SHIFT,RUN;
+bool STATE = true;
+float EFF;
 int minutes,hours,seconds;
 // const char* pubserverUrl = ""; 
 unsigned long previousMillis = 0;  
@@ -156,84 +158,98 @@ void pref()
 char * topic_val(String top)
 {
   static char values[20];
-  if(top == "PICKS")
+  if(top == "picks")
   {
-  cloud_upload(top,picks);
+  cloud_upload(top,PICKS);
   
-  sprintf(values,"%d",picks);
+  sprintf(values,"%d",PICKS);
   }
 
-  if(top== "WARP")
+  if(top== "warp")
   {
-  cloud_upload(top,warp);
-  sprintf(values,"%d",warp);
+  cloud_upload(top,WARP);
+  sprintf(values,"%d",WARP);
   }
-  if(top=="FILL")
+  if(top=="fill")
   {
-  cloud_upload(top,fill);
-  sprintf(values,"%d",fill);
+  cloud_upload(top,FILL);
+  sprintf(values,"%d",FILL);
   }
 
-  if(top=="OTHER")
+  if(top=="others")
   {
-  cloud_upload(top,other);
-  sprintf(values,"%d",other);
+  cloud_upload(top,OTHERS);
+  sprintf(values,"%d",OTHERS);
   }
   
-  if(top=="TOTAL")
+  if(top=="total")
   {
-  cloud_upload(top,total);
-  sprintf(values,"%d",total);
+  cloud_upload(top,TOTAL);
+  sprintf(values,"%d",TOTAL);
   }
   
-  if(top=="SHIFT")
+  if(top=="shiftSeconds")
   {
-    // cloud_upload(top,shift);
-    if(shift>=60)
+    // cloud_upload(top,SHIFT);
+    if(SHIFT>=60)
     {
-      seconds = shift % 60;
-      minutes = shift/60;
+      seconds = SHIFT % 60;
+      minutes = SHIFT/60;
 
       if(minutes>=60)
       {
-        minutes = shift%3600;
+        minutes = SHIFT%3600;
         hours = hours /3600;
       }
     }
     else
     {
-      seconds=shift;
+      seconds=SHIFT;
     }
     sprintf(values,"%02d:%02d:%02d",hours,minutes,seconds);
-    doc[top]=values;
-    // dtostrf(shift,6,2,values);
+    cloud_upload(top,SHIFT);
   }
   
   
-  if(top== "RUN")
+  if(top== "runSeconds")
   {
-    cloud_uploadf(top,run);
-    run/=3600;
-    dtostrf(run,6,2,values);
+    if(RUN>=60)
+    {
+      seconds = RUN % 60;
+      minutes = RUN/60;
+
+      if(minutes>=60)
+      {
+        minutes = RUN%3600;
+        hours = hours /3600;
+      }
+    }
+    else
+    {
+      seconds=RUN;
+    }
+    sprintf(values,"%02d:%02d:%02d",hours,minutes,seconds);
+    cloud_upload(top,RUN);
   }
 
   
-  if(top=="EFF")
+  if(top=="efficiency")
 {
-  cloud_uploadf(top,eff);
-  dtostrf(eff,6,2,values);
+  cloud_uploadf(top,EFF);
+  dtostrf(EFF,6,2,values);
 }
   
-  if(top=="STATE")
+  if(top=="state")
   {
-  cloud_upload(top,state);
-  sprintf(values,"%d",state);
-    }
+  // cloud_upload(top,STATE);
+  doc[top,STATE];
+  sprintf(values,"%d",STATE);
+  }
   
-  if(top=="CAUSE")
+  if(top=="cause")
   {
-    cloud_upload(top,cause);
-    sprintf(values,"%d",cause);
+    cloud_upload(top,CAUSE);
+    sprintf(values,"%d",CAUSE);
   }
   return values;
 }
@@ -277,35 +293,49 @@ void store(String data)
     value = data.substring(sep1 + 1, sep2);
    
 
-    if (key == "PICKS")
-      picks = value.toInt();
-    else if (key == "WARP")
-      warp = value.toInt();
-    else if (key == "FILL")
-      fill = value.toInt();
-    else if (key == "OTHER")
-      other = value.toInt();
-    else if (key == "TOTAL")
-      total = value.toInt();
-    else if (key == "SHIFT")
-      shift = value.toFloat();
-    else if (key == "RUN")
-      run = value.toFloat();
-    else if (key == "EFF")
-      eff = value.toFloat();
-    else if (key == "STATE")
-      state = value.toInt();
-    else if (key == "CAUSE")
-      cause = value.toInt();
+    if (key == "picks")
+      PICKS = value.toInt();
+    else if (key == "warp")
+      WARP = value.toInt();
+    else if (key == "fill")
+      FILL = value.toInt();
+    else if (key == "others")
+      OTHERS = value.toInt();
+    else if (key == "total")
+      TOTAL = value.toInt();
+    else if (key == "shift")
+      SHIFT = value.toInt();
+    else if (key == "run")
+      RUN = value.toInt();
+    else if (key == "eff")
+      EFF = value.toFloat();
+    else if (key == "state")
+      STATE = true;
+    else if (key == "cause")
+      CAUSE = value.toInt();
 
     if (sep2 >= data.length())
       break;
 
     startIndex = sep2 + 1;
   }
+  // Serial.println("Value stored");
 }
 
 
+int jsons(String str)
+{
+    HTTPClient http;
+    // http.begin(serverUrl);
+    http.begin("http://192.168.1.38:8094/hms-rest-api/api/looms");
+    // http://192.168.1.38:8094/hms-rest-api/api/data
+    http.addHeader("Content-Type", "application/json");
+    int httpResponseCode = http.POST(str);
+    SerialBT.println(httpResponseCode);
+    Serial.println(httpResponseCode);
+    http.end();
+    return httpResponseCode;
+}
 
 
 
@@ -317,7 +347,7 @@ void setup()
 {
   Serial.begin(57600);
   create_task();
-  NewSerial.begin(115200,SERIAL_8N1,16,17);
+  NewSerial.begin(57600,SERIAL_8N1,16,17);
   SPIFFS.begin();
   EEPROM.begin(512);
   WiFi.mode(WIFI_STA);
@@ -372,34 +402,42 @@ void loop()
     {
       input =NewSerial.readStringUntil('\n');
       if(input.length()>0)
+      {
+        Serial.println("Data arriver : " + input);
       break;
+      }
     }
     store(input);
     }
   String val;
- 
-  for(int i =0;i<10;i++)
+ if(millis()-pubmillis>1000)
+ {
+  
+  for(int i =0;i<9;i++)
   {
     val=topic_val(topic[i]);
     client.publish(topic[i].c_str(), val.c_str());
   }
+  pubmillis = millis();
+ }
   if(millis()-previousMillis >= interval)
   {
+    doc["machineId"] = millis();
       previousMillis=millis();
       String jsonString;
       serializeJson(doc, jsonString);
-      int response = json(jsonString);
+      Serial.println(jsonString);
+      int response = jsons(jsonString);
       if(response!=200)
       {
-        failed(jsonString);
+        // failed(jsonString);
       }
       else
       {
-        Serial.println("Call From main");
-        Send();
+  
+        // Send();
       }
   }
-  Serial.println(client.state());
   client.loop();
-  delay(1000);
+  delay(100);
 }
