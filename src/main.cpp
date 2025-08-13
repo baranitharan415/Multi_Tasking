@@ -1,12 +1,13 @@
-// #include <WiFi.h>
+#include <WiFi.h>
 #include <EEPROM.h>
-// #include <Arduino.h>
-// #include <ArduinoJson.h>
+#include <Arduino.h>
+#include <ArduinoJson.h>
 #include <PubSubClient.h>
-// #include <HTTPClient.h>
+#include <HTTPClient.h>
 #include <SPIFFS.h>
 #include <send_fail.h>
-#include "employee.h"
+#include <stdlib.h>
+//#include "employee.h"
 
 
 HardwareSerial NewSerial(2);
@@ -327,11 +328,12 @@ int jsons(String str)
 {
     HTTPClient http;
     // http.begin(serverUrl);
-    http.begin("http://192.168.1.38:8094/hms-rest-api/api/looms");
+    // http.begin("http://192.168.1.38:8094/hms-rest-api/api/looms");
+        http.begin("http://192.168.1.40:5000/api/data");
     // http://192.168.1.38:8094/hms-rest-api/api/data
     http.addHeader("Content-Type", "application/json");
     int httpResponseCode = http.POST(str);
-    SerialBT.println(httpResponseCode);
+    //SerialBT.println(httpResponseCode);
     Serial.println(httpResponseCode);
     http.end();
     return httpResponseCode;
@@ -346,7 +348,7 @@ int jsons(String str)
 void setup() 
 {
   Serial.begin(57600);
-  create_task();
+  // create_task();
   NewSerial.begin(57600,SERIAL_8N1,16,17);
   SPIFFS.begin();
   EEPROM.begin(512);
@@ -422,21 +424,22 @@ void loop()
  }
   if(millis()-previousMillis >= interval)
   {
-    doc["machineId"] = millis();
+    int M_id = (rand() % 25) + 1;
+    doc["machineId"] = M_id;
       previousMillis=millis();
       String jsonString;
       serializeJson(doc, jsonString);
       Serial.println(jsonString);
       int response = jsons(jsonString);
-      if(response!=200)
-      {
-        // failed(jsonString);
-      }
-      else
-      {
+      // if(response!=200)
+      // {
+      //   failed(jsonString);
+      // }
+      // else
+      // {
   
-        // Send();
-      }
+      //   Send();
+      // }
   }
   client.loop();
   delay(100);

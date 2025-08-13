@@ -115,8 +115,8 @@ void start()
 int json(String str)
 {
     HTTPClient http_s;
-    // http_s.begin(serverUrl);
-    http_s.begin("http://192.168.1.38:8094/hms-rest-api/api/employees");
+    http_s.begin("http://192.168.1.40:5000/api/data");
+    // http_s.begin("http://192.168.1.38:8094/hms-rest-api/api/employees");
     // http://192.168.1.38:8094/hms-rest-api/api/data
     http_s.addHeader("Content-Type", "application/json");
     int httpResponseCode = http_s.POST(str);

@@ -3,11 +3,11 @@
 
 // #include <Arduino.h>
 #include <SD.h>
-#include <employee.h>
+//#include <employee.h>
 #include <SPIFFS.h>
 long file_count = 0;
 #define SD_CS 5 // Chip select pin
-
+int jsons(String str);
 void failed(String str)
 {
    
@@ -56,7 +56,7 @@ void Send()
         String file_name = "/"+String(file.name());
         String data = file.readString();
         file.close();
-        if (json(data) != 200)
+        if (jsons(data) != 200)
         {
             failed(data);
             break;
