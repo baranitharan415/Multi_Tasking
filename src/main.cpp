@@ -7,7 +7,7 @@
 #include <SPIFFS.h>
 #include <send_fail.h>
 #include <stdlib.h>
-//#include "employee.h"
+#include "employee.h"
 
 
 HardwareSerial NewSerial(2);
@@ -260,18 +260,27 @@ void connect() {
   while (!client.connected())
   client.connect(client_name.c_str(), "bharani", "1234");
   // for(int i=0;i<10;i++)
-  // client.subscribe(topic[i].c_str());
+  client.subscribe("details");
   Serial.println("Client connected");
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
+  doc.clear();
+  String message;
   Serial.print("Message arrived [");
   Serial.print(topic);
   Serial.print("] ");
-  for (int i = 0; i < length; i++) {
+  for (int i = 0; i < length; i++) 
+  {
+    message += (char)payload[i];
     Serial.print((char)payload[i]);
   }
   Serial.println();
+  Serial.println(message);
+  deserializeJson(doc,message);
+  Serial.println(doc["RF_id"].as<String>());
+  Serial.println(doc["name"].as<String>());
+  Add_new(doc["RF_id"].as<String>(),doc["name"].as<String>());
 }
 
 
@@ -329,12 +338,12 @@ int jsons(String str)
     HTTPClient http;
     // http.begin(serverUrl);
     // http.begin("http://192.168.1.38:8094/hms-rest-api/api/looms");
-        http.begin("http://192.168.1.40:5000/api/data");
+    http.begin("http://192.168.0.45:5000/api/data");
     // http://192.168.1.38:8094/hms-rest-api/api/data
     http.addHeader("Content-Type", "application/json");
     int httpResponseCode = http.POST(str);
     //SerialBT.println(httpResponseCode);
-    Serial.println(httpResponseCode);
+    // Serial.println(httpResponseCode);
     http.end();
     return httpResponseCode;
 }
@@ -347,8 +356,7 @@ int jsons(String str)
 
 void setup() 
 {
-  Serial.begin(57600);
-  // create_task();
+  Serial.begin(115200);
   NewSerial.begin(57600,SERIAL_8N1,16,17);
   SPIFFS.begin();
   EEPROM.begin(512);
@@ -369,6 +377,7 @@ void setup()
       t = 0;
     }
   }
+  create_task();
 
   Serial.println("Connected");
   Serial.print("IP address : ");
@@ -414,7 +423,7 @@ void loop()
   String val;
  if(millis()-pubmillis>1000)
  {
-  
+  doc.clear();
   for(int i =0;i<9;i++)
   {
     val=topic_val(topic[i]);
