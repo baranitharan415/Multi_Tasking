@@ -10,15 +10,14 @@
 #include <Adafruit_PN532.h>
 
 String status;
-int work = 0;
-
-
+unsigned long work ,sec;
+time_t shift_start;
 int sck = 18,cs =5, mosi = 23, miso = 19;
-
-
+struct tm timeinfo;
+bool TG = true;
 Adafruit_PN532 nfc (sck,miso,mosi,cs);
 // JsonDocument doc;
-bool allocate;
+bool allocate = false;
 String Allocate_name,Allocate_id;
 
 struct account
@@ -69,31 +68,36 @@ String card_read(uint8_t *arr,uint8_t n )
   return id;
 }
 
-String assign()
-{
-  Serial.println("Please Tap a Card");
-  while(1)
-  {
-    uint8_t arr[7],length;
-    if(nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A,arr,&length))
-    {
-    String id = card_read(arr,length);
-    return id;
-    }
-    vTaskDelay(100);
-  }
-}
 
 
 void convert()
 {
+    int minutes = 0, hours = 0, seconds = 0;
+    char values[20];
+    if (work >= 60)
+    {
+        seconds = work % 60;
+        minutes = work / 60;
+
+        if (minutes >= 60)
+        {
+            minutes = work % 3600;
+            hours = hours / 3600;
+        }
+    }
+    else
+    {
+        seconds = work;
+    }
+    sprintf(values, "%02d:%02d:%02d", hours, minutes, seconds);
     JsonDocument docum;
     docum["employeeId"] = Allocate_id;
     docum["machineId"] = millis()%20+1;
+    docum["employeeName"] = Allocate_name;
     docum["startingTime"] = in_time;
     docum["endingTime"] = out_time;
     // docum["Employee Name"] = employee[id.toInt()];
-    // docum["Working Hours"] = values;
+    docum["Working Hours"] = values;
     String str;
     serializeJson(docum, str);
     Serial.println(str);
@@ -107,14 +111,20 @@ void convert()
 void start()
 {
     Serial.println("Shift time started");
-    struct tm timeinfo;
+    work = millis();
+    digitalWrite(2,HIGH);
     if (getLocalTime(&timeinfo))
     {
+        shift_start = mktime(&timeinfo);
+        Serial.println(shift_start);
         getLocalTime(&timeinfo);
         strftime(in_time, sizeof(in_time), "%Y-%m-%dT%H:%M:%S.000Z", &timeinfo);
+        TG = true;
     }
     else
     {
+        TG = false;
+        shift_start = mktime(&timeinfo);
         Serial.println("Time Getting failed");
     }
 }
@@ -135,6 +145,9 @@ void stop()
 {
     Serial.println("Shift time ended");
     struct tm timeinfo;
+    work = sec;
+
+    digitalWrite(2,LOW);
     if (getLocalTime(&timeinfo))
     {
         strftime(out_time, sizeof(out_time), "%Y-%m-%dT%H:%M:%S.000Z", &timeinfo);
@@ -148,6 +161,7 @@ void stop()
     Serial.println(in_time);
     Serial.print("Out Time : ");
     Serial.println(out_time);
+    allocate = !allocate;
 }
 bool verify()
 {
@@ -275,38 +289,6 @@ void files()
 
 }
 
-void choice()
-{
-  while(1)
-  {
-
-    Serial.println("1==>Change Admin Password ");
-    Serial.println("2==>List Files");
-    Serial.println("3==>Continue");
-    String val;
-    val=Read();
-    if(val == "1")
-    {
-      if(verify())
-      {  
-      occ.password=pwd_set();
-      EEPROM.put(50,occ);
-      EEPROM.commit();
-      }
-    }
-    if(val == "2")
-    {
-      files();
-    }
-    if(val == "3")
-    break;
-    // if(val == "4")
-    // files();
-    
-  }
-
-}
-
 
 void initial()
 {
@@ -319,47 +301,61 @@ void initial()
 
 
 
-void admin()
-{
-    // EEPROM.write(50,255);
-    // EEPROM.commit();
-    if(EEPROM.read(50)==255)
-    {
-      Serial.println("Welcome to Our Page");
-      initial();
-    }
-    choice();
-}
-
-
 void attendance(void *para)
 {
 
     nfc.begin();
     nfc.SAMConfig();   
     SPIFFS.begin(true);
-    admin();
+      uint32_t versiondata = nfc.getFirmwareVersion();
+      if(!versiondata)
+      {
+        Serial.println("Not Connected");
+        nfc.begin();
+        // continue;
 
+      }
     configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
 
     while (1)
     {
+
+      
         uint8_t uid[7];
         uint8_t uidLength;
-        if (!nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength))
-            return;
-        if (!allocate)
+         if(allocate)
         {
+          sec=millis()/1000 - work/1000;
+          if(TG)
+          {
+          getLocalTime(&timeinfo);
+          time_t now = mktime(&timeinfo);
+          // Serial.println("Shift "+(String)shift_start+" Now "+(String)now);
+          if(now - shift_start >= 60)
+            stop();
+          }
+          else
+          {
+            if(sec>=60)
+              stop();
+          }
+        }
+        if (!nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength,1000))
+            continue;
+        if (!allocate )
+        {
+          if(millis()-last_millis>5000)
+          {
             String id = card_read(uid, uidLength);
             check(id);
             last_millis = millis();
+          }
         }
         else if (allocate && card_read(uid, uidLength) == Allocate_id )
         {
             if(millis()-last_millis>5000)
             {
             Serial.println(Allocate_name + " Shift time is over");
-            allocate = !allocate;
             stop();
             last_millis=millis();
             }

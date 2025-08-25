@@ -6,13 +6,14 @@
 //#include <employee.h>
 #include <SPIFFS.h>
 long file_count = 0;
-#define SD_CS 5 // Chip select pin
+#define SD_CS 4 // Chip select pin
+SPIClass spiSD(VSPI);
 int jsons(String str);
 void failed(String str)
 {
-   
-
-    if (!SD.begin(SD_CS))
+    char name[30];
+    spiSD.begin(14, 12, 13, SD_CS);
+    if (!SD.begin(SD_CS, spiSD))
     {
         Serial.println("SD Card Mount Failed");
         return;
@@ -24,8 +25,10 @@ void failed(String str)
         Serial.println("No SD card attached");
         return;
     }
-
-    String file_name = "/" + String(file_count++) + ".json";
+    struct tm timeinfo;
+    getLocalTime(&timeinfo);
+    strftime(name, sizeof(name), "%Y%m%dT%H%M%S000Z", &timeinfo);
+    String file_name = "/" + String(name) + ".json";
 
     File file = SD.open(file_name, FILE_WRITE);
     file.print(str);

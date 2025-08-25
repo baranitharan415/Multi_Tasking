@@ -12,6 +12,7 @@
 
 HardwareSerial NewSerial(2);
 
+int led = 2;
 int pubmillis =0;
 HTTPClient http;
 String input;
@@ -41,7 +42,8 @@ PubSubClient client(espClient);
 
 struct change
 {
-  String E_ssid, E_pwd, E_ip,E_client_name;
+  String E_ssid, E_pwd, E_ip;
+  char E_client_name[32];
 };
 
 change acc;
@@ -93,7 +95,8 @@ void set()
   acc.E_ssid = ssid;
   acc.E_pwd = pwd;
   acc.E_ip = ms;
-  acc.E_client_name=client_name;
+
+  strncpy(acc.E_client_name, client_name.c_str(), sizeof(acc.E_client_name));
   EEPROM.put(0, acc);
   EEPROM.commit();
 }
@@ -243,7 +246,7 @@ char * topic_val(String top)
   if(top=="state")
   {
   // cloud_upload(top,STATE);
-  doc[top,STATE];
+  doc[top] = int(STATE);
   sprintf(values,"%d",STATE);
   }
   
@@ -356,6 +359,7 @@ int jsons(String str)
 
 void setup() 
 {
+  pinMode(led,OUTPUT);
   Serial.begin(115200);
   NewSerial.begin(57600,SERIAL_8N1,16,17);
   SPIFFS.begin();
@@ -414,7 +418,7 @@ void loop()
       input =NewSerial.readStringUntil('\n');
       if(input.length()>0)
       {
-        Serial.println("Data arriver : " + input);
+        // Serial.println("Data arriver : " + input);
       break;
       }
     }
@@ -426,8 +430,9 @@ void loop()
   doc.clear();
   for(int i =0;i<9;i++)
   {
+    
     val=topic_val(topic[i]);
-    client.publish(topic[i].c_str(), val.c_str());
+    client.publish(topic[i].c_str(), val.c_str(),true);
   }
   pubmillis = millis();
  }
